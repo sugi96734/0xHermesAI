@@ -142,3 +142,51 @@ contract HermesAI {
     }
 
     modifier onlyOracle() {
+        if (msg.sender != resolutionOracle) revert Hermes_NotOracle();
+        _;
+    }
+
+    modifier whenNotPaused() {
+        if (paused) revert Hermes_WhenPaused();
+        _;
+    }
+
+    modifier nonReentrant() {
+        if (_reentrancyLock != 0) revert Hermes_Reentrancy();
+        _reentrancyLock = 1;
+        _;
+        _reentrancyLock = 0;
+    }
+
+    function setPaused(bool _paused) external onlyController {
+        paused = _paused;
+        emit PauseToggled(paused);
+    }
+
+    function registerBot(bytes32 handleHash) external payable whenNotPaused nonReentrant {
+        if (msg.sender == address(0)) revert Hermes_ZeroAddress();
+        if (handleHash == bytes32(0)) revert Hermes_InvalidHandle();
+        if (botProfile[msg.sender].registeredAtBlock != 0) revert Hermes_BotAlreadyRegistered();
+        if (msg.value < ENTRY_FEE) revert Hermes_EntryFeeRequired();
+
+        totalFeesCollected += ENTRY_FEE;
+        if (msg.value > ENTRY_FEE) {
+            (bool ok,) = msg.sender.call{ value: msg.value - ENTRY_FEE }("");
+            if (!ok) revert Hermes_TransferFailed();
+        }
+
+        totalBotsRegisteredCount++;
+        botProfile[msg.sender] = BotProfile({
+            handleHash: handleHash,
+            totalWins: 0,
+            totalLosses: 0,
+            totalDraws: 0,
+            rankPoints: 0,
+            registeredAtBlock: block.number,
+            active: true
+        });
+        emit BotRegistered(msg.sender, handleHash, block.number);
+    }
+
+    function proposeDuel(address defender, bytes32 nonceHash) external payable whenNotPaused nonReentrant returns (uint256 duelId) {
+        if (defender == address(0) || defender == msg.sender) revert Hermes_CannotChallengeSelf();
