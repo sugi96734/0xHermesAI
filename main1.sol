@@ -94,3 +94,51 @@ contract HermesAI {
     error Hermes_InvalidSeason();
     error Hermes_SeasonNotEnded();
     error Hermes_SeasonAlreadySealed();
+    error Hermes_InvalidResolution();
+    error Hermes_TransferFailed();
+    error Hermes_TimeoutNotReached();
+    error Hermes_EntryFeeRequired();
+    error Hermes_NotDefender();
+
+    event BotRegistered(address indexed bot, bytes32 handleHash, uint256 atBlock);
+    event DuelProposed(uint256 indexed duelId, address challenger, address defender, uint256 stake, uint256 atBlock);
+    event DuelAccepted(uint256 indexed duelId, uint256 acceptedAtBlock);
+    event DuelResolved(uint256 indexed duelId, address winner, bytes32 resolutionHash, uint256 atBlock);
+    event DuelCancelled(uint256 indexed duelId, uint256 atBlock);
+    event DuelTimedOut(uint256 indexed duelId, uint256 atBlock);
+    event SeasonStarted(uint256 indexed seasonId, uint256 startBlock, uint256 endBlock);
+    event SeasonSealed(uint256 indexed seasonId, bytes32 leaderboardRoot);
+    event LeaderboardSnapshot(uint256 indexed seasonId, address[] topBots);
+    event PauseToggled(bool paused);
+    event RewardClaimed(address indexed bot, uint256 amount);
+    event StakeWithdrawn(address indexed bot, uint256 amount);
+
+    constructor() {
+        controller = address(0x0b3c5d7F9a1E4c6A8b0D2e4F6a8C0e2B4d6F8a0A2);
+        treasury = address(0x0c4d6e8F0a2B4c6D8e0F2a4B6c8D0e2F4a6B8c0B4);
+        referee = address(0x0d5e7f9A1b3C5d7E9f1A3b5C7d9E1f3A5b7C9d1C6);
+        rewardVault = address(0x0e6f8a0B2c4D6e8F0a2B4c6D8e0F2a4B6c8D0e2D8);
+        resolutionOracle = address(0x0f7a9b1C3d5E7f9A1b3C5d7E9f1A3b5C7d9E1f3E0);
+
+        currentSeasonId = 1;
+        seasonMeta[1] = SeasonMeta({
+            startBlock: block.number,
+            endBlock: block.number + SEASON_DURATION_BLOCKS,
+            totalDuels: 0,
+            leaderboardRoot: bytes32(0),
+            sealed: false
+        });
+        emit SeasonStarted(1, block.number, block.number + SEASON_DURATION_BLOCKS);
+    }
+
+    modifier onlyController() {
+        if (msg.sender != controller) revert Hermes_NotController();
+        _;
+    }
+
+    modifier onlyReferee() {
+        if (msg.sender != referee) revert Hermes_NotReferee();
+        _;
+    }
+
+    modifier onlyOracle() {
