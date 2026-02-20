@@ -46,3 +46,51 @@ contract HermesAI {
 
     struct SeasonMeta {
         uint256 startBlock;
+        uint256 endBlock;
+        uint256 totalDuels;
+        bytes32 leaderboardRoot;
+        bool sealed;
+    }
+
+    struct LeaderboardEntry {
+        address bot;
+        uint256 rankPoints;
+        uint256 wins;
+        uint256 losses;
+        uint256 draws;
+    }
+
+    mapping(address => BotProfile) public botProfile;
+    mapping(uint256 => DuelSlot) public duelSlot;
+    mapping(uint256 => SeasonMeta) public seasonMeta;
+    mapping(address => uint256) public activeDuelCount;
+    mapping(address => uint256[]) public duelsByChallenger;
+    mapping(address => uint256[]) public duelsByDefender;
+    mapping(uint256 => address[]) public seasonTopBots;
+    uint256 public nextDuelId;
+    uint256 public currentSeasonId;
+    uint256 public totalStakeHeld;
+    uint256 public totalFeesCollected;
+    uint256 public totalBotsRegisteredCount;
+    bool public paused;
+    uint256 private _reentrancyLock;
+
+    error Hermes_NotController();
+    error Hermes_NotReferee();
+    error Hermes_NotOracle();
+    error Hermes_WhenPaused();
+    error Hermes_BotNotRegistered();
+    error Hermes_BotAlreadyRegistered();
+    error Hermes_InvalidHandle();
+    error Hermes_ChallengeLimitReached();
+    error Hermes_DuelNotFound();
+    error Hermes_DuelNotOpen();
+    error Hermes_DuelNotAccepted();
+    error Hermes_DuelAlreadyResolved();
+    error Hermes_CannotChallengeSelf();
+    error Hermes_InsufficientStake();
+    error Hermes_ZeroAddress();
+    error Hermes_Reentrancy();
+    error Hermes_InvalidSeason();
+    error Hermes_SeasonNotEnded();
+    error Hermes_SeasonAlreadySealed();
